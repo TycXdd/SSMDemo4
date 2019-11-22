@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!--nameSpace 必须和对应的Dao接口的全名相同-->
+<mapper namespace="com.qfedu.demo.user.dao.IUserDao">
+    <!--映射ResultSet中一行数据到一个Java对象-->
+    <resultMap id="userMap" type="com.qfedu.demo.user.service.bo.User">
+        <id column="user_id" property="userId"></id>
+        <result column="user_name" property="userName"></result>
+        <result column="password" property="password"></result>
+    </resultMap>
+
+    <resultMap id="userMenuMap" type="com.qfedu.demo.user.service.bo.User" extends="userMap">
+        <collection property="menus" ofType="com.qfedu.demo.user.service.bo.Menu">
+            <result column="menu_name" property="menuName"></result>
+            <result column="menu_url" property="url"></result>
+        </collection>
+    </resultMap>
+
+    <sql id="userColumns">${alias}.user_id, ${alias}.user_name, ${alias}.password</sql>
+
+    <insert id="insert">
+        insert into users (user_name,password) values (#{userName},#{password})
+    </insert>
+
+    <select id="getUserByUserName" resultMap="userMenuMap">
+        select t1.user_id, t1.user_name, t1.password, t5.menu_url, t5.menu_name
+        from
+        users t1
+        LEFT JOIN role_user t2 ON t1.user_id = t2.user_id
+        LEFT JOIN role t3 ON t2.role_id = t3.role_id
+        LEFT JOIN role_menu t4 ON t3.role_id = t4.role_id
+        LEFT JOIN menu t5 ON t4.menu_id = t5.menu_id
+        where t1.user_name=#{userName}
+    </select>
+
+    <select id="delete">
+        delete from users where user_id=#{userId}
+    </select>
+
+    <select id="update">
+        update users set user_name=#{userName}, password=#{password} where user_id=#{userId}
+    </select>
+
+    <select id="page" resultMap="userMap">
+        select
+        <include refid="userColumns">
+            <property name="alias" value="t1"/>
+        </include>
+        from users t1
+        <where>
+            <if test="userName != null and userName != ''">
+                <bind name="name" value="'%'+userName+'%'"/>
+                user_name like #{userName}
+            </if>
+        </where>
+        order by t1.user_id desc
+        <include refid="pagger.pagger"></include>
+    </select>
+
+    <select id="pageCount" resultType="int">
+        select
+        count(t1.user_id)
+        from users t1
+        <where>
+            <if test="userName != null and userName != ''">
+                <bind name="name" value="'%'+userName+'%'"/>
+                user_name=#{userName}
+            </if>
+        </where>
+    </select>
+
+    <select id="findById" resultMap="userMap">
+        select
+        <include refid="userColumns"><property name="alias" value="t1"/></include>
+        from users t1
+        <where>
+            user_id = #{userId}
+        </where>
+    </select>
+</mapper>
